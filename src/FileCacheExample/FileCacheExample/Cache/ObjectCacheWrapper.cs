@@ -3,6 +3,9 @@ using System.Runtime.Caching;
 
 namespace FileCacheExample.Cache
 {   
+    /// <summary>
+    /// Author: Kunuk Nykjaer
+    /// </summary>
     public class ObjectCacheWrapper : IObjectCache
     {
         private readonly ObjectCache cache;

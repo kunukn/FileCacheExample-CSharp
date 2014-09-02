@@ -1,14 +1,15 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
-using Newtonsoft.Json.Linq;
 
 namespace FileCacheExample.Cache
 {
     /// <summary>
+    /// Author: Kunuk Nykjaer
+    /// 
     /// Folder must exists with given file path
     ///     
     /// File cache which doesn't invalidate, you must manually delete the file if you to invalidate the cache

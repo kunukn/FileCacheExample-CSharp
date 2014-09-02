@@ -4,6 +4,7 @@ using System.Runtime.Caching;
 namespace FileCacheExample
 {
     /// <summary>
+    /// Author: Kunuk Nykjaer
     /// Partial needed methods taken from abstract object cache class
     /// </summary>
     public interface IObjectCache

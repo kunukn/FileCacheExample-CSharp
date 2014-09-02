@@ -10,6 +10,10 @@ namespace FileCacheExample
 {
     class Program
     {
+        /// <summary>
+        /// Author: Kunuk Nykjaer
+        /// </summary>
+        /// <param name="args"></param>
         static void Main(string[] args)
         {
             const string key = "key";
