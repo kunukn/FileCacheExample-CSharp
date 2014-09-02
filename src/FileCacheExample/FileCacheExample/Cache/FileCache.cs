@@ -117,7 +117,7 @@ namespace FileCacheExample.Cache
 
             if (type == typeof(JObject)) return ((JObject)obj).ToObject<T>();
             if (type == typeof(JArray)) return ((JArray)obj).ToObject<T>();
-            if (type == typeof (T)) return ((T) obj);
+            if (type == typeof (T)) return (T) obj;
             return obj as T;
         }
 
