@@ -7,160 +7,165 @@ using System.Text;
 
 namespace FileCacheExample.Cache
 {
-    /// <summary>
-    /// Author: Kunuk Nykjaer
-    /// 
-    /// Folder must exists with given file path
-    ///     
-    /// File cache which doesn't invalidate, you must manually delete the file if you to invalidate the cache
-    /// This is best used when get operations are frequently used and set operations are rarely used.
-    /// This is due to set operations are slow because every set operation must re-create the file on disk.
-    /// 
-    /// RegionName is not supported
-    /// </summary>
-    public class FileCache : IObjectCache
-    {
-        private readonly object threadsafe = new object();
+	/// <summary>
+	/// Author: Kunuk Nykjaer
+	/// 
+	/// Folder must exists with given file path
+	///     
+	/// File cache which doesn't invalidate, you must manually delete the file if you to invalidate the cache
+	/// This is best used when get operations are frequently used and set operations are rarely used.
+	/// This is due to set operations are slow because every set operation must re-create the file on disk.
+	/// 
+	/// RegionName is not supported
+	/// </summary>
+	public class FileCache : IObjectCache
+	{
+		private readonly object threadsafe = new object();
 
-        private readonly string filePath;
+		private readonly string filePath;
 
-        private IDictionary<string, object> lookup = new Dictionary<string, object>();
+		private IDictionary<string, object> lookup = new Dictionary<string, object>();
 
-        public FileCache(string filePath)
-        {
-            // Guard clause
-            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("filepath");
+		public FileCache(string filePath)
+		{
+			// Guard clauses
+			if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("filepath");
 
-            // Update
-            this.filePath = filePath;
+			var file = new FileInfo(filePath);
+			if (file.DirectoryName == null) throw new ArgumentException("folder must exists");
 
-            // Load cache from disk
-            Load();
-        }
+			if (!Directory.Exists(file.DirectoryName)) throw new Exception("folder must exists");
 
-        public Exception LastException { get; private set; }
+			// Update
+			this.filePath = filePath;
 
-        public string Name
-        {
-            get { return "FileCache"; }
-        }
+			// Load cache from disk
+			Load();
+		}
 
-        internal void Load()
-        {
-            lock (threadsafe)
-            {
-                try
-                {
-                    string json;
-                    if (!File.Exists(filePath))
-                    {
-                        json = Newtonsoft.Json.JsonConvert.SerializeObject(lookup);
-                        File.WriteAllText(filePath, json, Encoding.UTF8);
-                    }
+		public Exception LastException { get; private set; }
 
-                    json = File.ReadAllText(filePath, Encoding.UTF8);
-                    lookup = Newtonsoft.Json.JsonConvert.DeserializeObject<IDictionary<string, object>>(json);
-                }
-                catch (Exception ex)
-                {
-                    LastException = ex;
-                    throw;
-                }
-            }
-        }
+		public string Name
+		{
+			get { return "FileCache"; }
+		}
 
-        internal void Save()
-        {
-            lock (threadsafe)
-            {
-                try
-                {
-                    var json = Newtonsoft.Json.JsonConvert.SerializeObject(lookup);
-                    File.WriteAllText(filePath, json, Encoding.UTF8);
-                }
-                catch (Exception ex)
-                {
-                    LastException = ex;
-                    throw;
-                }
-            }
-        }
+		internal void Load()
+		{
+			lock (threadsafe)
+			{
+				try
+				{
+					string json;
+					if (!File.Exists(filePath))
+					{
+						json = Newtonsoft.Json.JsonConvert.SerializeObject(lookup);
+						File.WriteAllText(filePath, json, Encoding.UTF8);
+					}
 
-        public object AddOrGetExisting(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
-        {
-            if (lookup.ContainsKey(key)) return lookup[key];
+					json = File.ReadAllText(filePath, Encoding.UTF8);
+					lookup = Newtonsoft.Json.JsonConvert.DeserializeObject<IDictionary<string, object>>(json);
+				}
+				catch (Exception ex)
+				{
+					LastException = ex;
+					throw;
+				}
+			}
+		}
 
-            lookup.Add(key, value);
-            Save();
-            return value;
-        }
+		internal void Save()
+		{
+			lock (threadsafe)
+			{
+				try
+				{
+					var json = Newtonsoft.Json.JsonConvert.SerializeObject(lookup);
+					File.WriteAllText(filePath, json, Encoding.UTF8);
+				}
+				catch (Exception ex)
+				{
+					LastException = ex;
+					throw;
+				}
+			}
+		}
 
-        public object AddOrGetExisting(string key, object value, CacheItemPolicy policy, string regionName = null)
-        {
-            if (lookup.ContainsKey(key)) return lookup[key];
+		public object AddOrGetExisting(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
+		{
+			if (lookup.ContainsKey(key)) return lookup[key];
 
-            lookup.Add(key, value);
-            Save();
-            return value;
-        }
+			lookup.Add(key, value);
+			Save();
+			return value;
+		}
 
-        public T Get<T>(string key, string regionName = null) where T : class
-        {
-            var obj = lookup.ContainsKey(key) ? lookup[key] : null;
-            return Cast<T>(obj);
-        }
+		public object AddOrGetExisting(string key, object value, CacheItemPolicy policy, string regionName = null)
+		{
+			if (lookup.ContainsKey(key)) return lookup[key];
 
-        internal T Cast<T>(object obj) where T : class
-        {
-            if (obj == null) return null;
+			lookup.Add(key, value);
+			Save();
+			return value;
+		}
 
-            Type type = obj.GetType();
+		public T Get<T>(string key, string regionName = null) where T : class
+		{
+			var obj = lookup.ContainsKey(key) ? lookup[key] : null;
+			return Cast<T>(obj);
+		}
 
-            if (type == typeof(JObject)) return ((JObject)obj).ToObject<T>();
-            if (type == typeof(JArray)) return ((JArray)obj).ToObject<T>();
-            if (type == typeof (T)) return (T) obj;
-            return obj as T;
-        }
+		internal T Cast<T>(object obj) where T : class
+		{
+			if (obj == null) return null;
 
-        public void Set(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
-        {
-            lookup[key] = value;
-            Save();
-        }
+			Type type = obj.GetType();
 
-        public bool Add(string key, object value, CacheItemPolicy policy, string regionName = null)
-        {
-            return (AddOrGetExisting(key, value, policy, regionName) == null);
-        }
+			if (type == typeof(JObject)) return ((JObject)obj).ToObject<T>();
+			if (type == typeof(JArray)) return ((JArray)obj).ToObject<T>();
+			if (type == typeof(T)) return (T)obj;
+			return obj as T;
+		}
 
-        public bool Add(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
-        {
-            return (AddOrGetExisting(key, value, absoluteExpiration, regionName) == null);
-        }
+		public void Set(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
+		{
+			lookup[key] = value;
+			Save();
+		}
 
-        public void Set(CacheItem item, CacheItemPolicy policy)
-        {
-            lookup[item.Key] = item.Value;
-            Save();
-        }
+		public bool Add(string key, object value, CacheItemPolicy policy, string regionName = null)
+		{
+			return AddOrGetExisting(key, value, policy, regionName) == null;
+		}
 
-        public void Set(string key, object value, CacheItemPolicy policy, string regionName = null)
-        {
-            lookup[key] = value;
-            Save();
-        }
+		public bool Add(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
+		{
+			return AddOrGetExisting(key, value, absoluteExpiration, regionName) == null;
+		}
 
-        public T Remove<T>(string key, string regionName = null) where T : class
-        {
-            object obj;
-            if (lookup.TryGetValue(key, out obj))
-            {
-                lookup.Remove(key);
-            }
+		public void Set(CacheItem item, CacheItemPolicy policy)
+		{
+			lookup[item.Key] = item.Value;
+			Save();
+		}
 
-            Save();
+		public void Set(string key, object value, CacheItemPolicy policy, string regionName = null)
+		{
+			lookup[key] = value;
+			Save();
+		}
 
-            return Cast<T>(obj);
-        }
-    }
+		public T Remove<T>(string key, string regionName = null) where T : class
+		{
+			object obj;
+			if (lookup.TryGetValue(key, out obj))
+			{
+				lookup.Remove(key);
+			}
+
+			Save();
+
+			return Cast<T>(obj);
+		}
+	}
 }
